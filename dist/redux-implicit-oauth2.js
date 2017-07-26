@@ -436,7 +436,6 @@ return /******/ (function(modules) { // webpackBootstrap
 
 	var listenForCredentials = function listenForCredentials(popup, state, resolve, reject) {
 	  var hash = void 0;
-	  console.log(popup);
 	  try {
 	    hash = popup.location.hash;
 	  } catch (err) {
@@ -474,6 +473,42 @@ return /******/ (function(modules) { // webpackBootstrap
 	  }
 	};
 
+	var listenForCredentials2 = function listenForCredentials2(iframe, state, resolve, reject) {
+	  var hash = void 0;
+	  try {
+	    hash = iframe.contentWindow.location.hash;
+	  } catch (err) {
+	    if (true) {
+	      /* eslint-disable no-console */
+	      console.error(err);
+	      /* eslint-enable no-console */
+	    }
+	  }
+
+	  if (hash) {
+
+	    var response = _queryString2['default'].parse(hash.substr(1));
+	    if (response.state !== state) {
+	      reject('Invalid state returned.');
+	    }
+
+	    if (response.access_token) {
+	      var expiresIn = response.expires_in ? parseInt(response.expires_in) : NaN;
+	      var result = {
+	        token: response.access_token,
+	        expiresAt: !isNaN(expiresIn) ? new Date().getTime() + expiresIn * 1000 : null
+	      };
+	      resolve(result);
+	    } else {
+	      reject(response.error || 'Unknown error.');
+	    }
+	  } else {
+	    setTimeout(function () {
+	      return listenForCredentials(iframe, state, resolve, reject);
+	    }, 100);
+	  }
+	};
+
 	var authorize = function authorize(config) {
 	  var state = (0, _cuid2['default'])();
 	  var query = _queryString2['default'].stringify({
@@ -485,9 +520,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	  });
 
 	  if (config.iframe) {
-	    var iframe = (0, _iframe2['default'])(config.url + (config.url.indexOf('?') === -1 ? '?' : '&') + query);
 	    return new Promise(function (resolve, reject) {
-	      return listenForCredentials(iframe, state, resolve, reject);
+	      (0, _iframe2['default'])(config.url + (config.url.indexOf('?') === -1 ? '?' : '&') + query).then(function (iframe) {
+	        listenForCredentials2(iframe, state, resolve, reject);
+	      })['catch'](function (err) {
+	        return reject(err);
+	      });
 	    });
 	  } else {
 	    var popup = (0, _popup2['default'])(config.url + (config.url.indexOf('?') === -1 ? '?' : '&') + query, 'oauth2');
@@ -573,7 +611,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { 'default': obj }; }
 
 	var openIframe = function openIframe(url) {
-	  return (0, _loadIframe2['default'])(url);
+	  return new Promise(function (resolve, reject) {
+	    var iframe = (0, _loadIframe2['default'])(url);
+	    iframe.onload = function () {
+	      return resolve(iframe);
+	    };
+	    iframe.onerror = function (e) {
+	      return reject(e);
+	    };
+	  });
 	};
 
 	exports['default'] = openIframe;

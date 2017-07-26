@@ -5,7 +5,6 @@ import openIframe from './util/iframe'
 
 const listenForCredentials = (popup, state, resolve, reject) => {
   let hash
-  console.log(popup)
   try {
     hash = popup.location.hash
   } catch (err) {
@@ -41,6 +40,40 @@ const listenForCredentials = (popup, state, resolve, reject) => {
   }
 }
 
+const listenForCredentials2 = (iframe, state, resolve, reject) => {
+  let hash
+  try {
+    hash = iframe.contentWindow.location.hash
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      /* eslint-disable no-console */
+      console.error(err)
+      /* eslint-enable no-console */
+    }
+  }
+
+  if (hash) {
+
+    const response = querystring.parse(hash.substr(1))
+    if (response.state !== state) {
+      reject('Invalid state returned.')
+    }
+
+    if (response.access_token) {
+      const expiresIn = response.expires_in ? parseInt(response.expires_in) : NaN
+      const result = {
+        token: response.access_token,
+        expiresAt: !isNaN(expiresIn) ? new Date().getTime() + expiresIn * 1000 : null
+      }
+      resolve(result)
+    } else {
+      reject(response.error || 'Unknown error.')
+    }
+  } else {
+    setTimeout(() => listenForCredentials(iframe, state, resolve, reject), 100)
+  }
+}
+
 const authorize = (config) => {
   const state = cuid()
   const query = querystring.stringify({
@@ -52,8 +85,12 @@ const authorize = (config) => {
   })
 
   if(config.iframe) {
-    const iframe = openIframe(config.url + (config.url.indexOf('?') === -1 ? '?' : '&') + query)
-    return new Promise((resolve, reject) => listenForCredentials(iframe, state, resolve, reject))
+    return new Promise((resolve, reject) => {
+      openIframe(config.url + (config.url.indexOf('?') === -1 ? '?' : '&') + query).then( (iframe)=> {
+        listenForCredentials2(iframe, state, resolve, reject)
+      }).catch(err => reject(err))
+    })
+
   } else {
     const popup = openPopup(config.url + (config.url.indexOf('?') === -1 ? '?' : '&') + query, 'oauth2')
 
