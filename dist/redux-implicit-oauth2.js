@@ -483,10 +483,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	      console.error(err);
 	      /* eslint-enable no-console */
 	    }
+	    reject('Connection error.');
 	  }
 
 	  if (hash) {
-
 	    var response = _queryString2['default'].parse(hash.substr(1));
 	    if (response.state !== state) {
 	      reject('Invalid state returned.');
@@ -502,10 +502,6 @@ return /******/ (function(modules) { // webpackBootstrap
 	    } else {
 	      reject(response.error || 'Unknown error.');
 	    }
-	  } else {
-	    setTimeout(function () {
-	      return listenForCredentials(iframe, state, resolve, reject);
-	    }, 100);
 	  }
 	};
 
@@ -618,7 +614,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    };
 	    iframe.onerror = function (e) {
 	      return reject(e);
-	    };
+	    }; //CORS 情況下好像不會觸發
 	  });
 	};
 

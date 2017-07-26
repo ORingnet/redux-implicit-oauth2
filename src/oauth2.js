@@ -50,10 +50,10 @@ const listenForCredentials2 = (iframe, state, resolve, reject) => {
       console.error(err)
       /* eslint-enable no-console */
     }
+    reject('Connection error.')
   }
 
   if (hash) {
-
     const response = querystring.parse(hash.substr(1))
     if (response.state !== state) {
       reject('Invalid state returned.')
@@ -69,8 +69,6 @@ const listenForCredentials2 = (iframe, state, resolve, reject) => {
     } else {
       reject(response.error || 'Unknown error.')
     }
-  } else {
-    setTimeout(() => listenForCredentials(iframe, state, resolve, reject), 100)
   }
 }
 
